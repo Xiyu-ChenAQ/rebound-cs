@@ -1,149 +1,124 @@
-[![Version](https://img.shields.io/badge/rebound-v4.6.0-green.svg?style=flat)](https://rebound.hanno-rein.de)
-[![codecov](https://codecov.io/github/hannorein/rebound/graph/badge.svg?token=Zmynoi99Vl)](https://codecov.io/github/hannorein/rebound)
-[![PyPI](https://badge.fury.io/py/rebound.svg)](https://badge.fury.io/py/rebound)
-[![GPL](https://img.shields.io/badge/license-GPL-green.svg?style=flat)](https://github.com/hannorein/rebound/blob/main/LICENSE)
-[![Paper](https://img.shields.io/badge/arXiv-1110.4876-green.svg?style=flat)](https://arxiv.org/abs/1110.4876)
-[![Paper](https://img.shields.io/badge/arXiv-1409.4779-green.svg?style=flat)](https://arxiv.org/abs/1409.4779)
-[![Paper](https://img.shields.io/badge/arXiv-1506.01084-green.svg?style=flat)](https://arxiv.org/abs/1506.01084)
-[![Paper](https://img.shields.io/badge/arXiv-1603.03424-green.svg?style=flat)](https://arxiv.org/abs/1603.03424)
-[![Paper](https://img.shields.io/badge/arXiv-1701.07423-green.svg?style=flat)](https://arxiv.org/abs/1701.07423)
-[![Paper](https://img.shields.io/badge/arXiv-1704.07715-green.svg?style=flat)](https://arxiv.org/abs/1704.07715)
-[![Paper](https://img.shields.io/badge/arXiv-1903.04972-green.svg?style=flat)](https://arxiv.org/abs/1903.04972)
-[![Paper](https://img.shields.io/badge/arXiv-1907.11335-green.svg?style=flat)](https://arxiv.org/abs/1907.11335)
-[![Docs](https://img.shields.io/badge/Documentation-green.svg?style=flat)](https://rebound.hanno-rein.de/)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/hannorein/rebound/main)
-[![REBOUND (C)](https://github.com/hannorein/rebound/actions/workflows/c.yml/badge.svg)](https://github.com/hannorein/rebound/actions/workflows/c.yml)
-[![REBOUND (python)](https://github.com/hannorein/rebound/actions/workflows/python.yml/badge.svg)](https://github.com/hannorein/rebound/actions/workflows/python.yml)
-    
+# Cosmic Stars — Physics Engine
 
-# Welcome to REBOUND
+> 基于 [REBOUND](https://github.com/hannorein/rebound) 的 Cosmic Stars 专属天体物理计算库。
+> 将 REBOUNDx 的物理扩展模块直接内嵌进 REBOUND，去除 Python 依赖，支持 MSVC 编译，面向 C# P/Invoke 分发。
 
-![REBOUND Examples](https://github.com/hannorein/rebound/raw/main/docs/img/reboundbanner.png)
+---
 
-REBOUND is an N-body integrator, i.e. a software package that can integrate the motion of particles under the influence of gravity. The particles can represent stars, planets, moons, ring or dust particles. REBOUND is very flexible and can be customized to accurately and efficiently solve many problems in astrophysics.  
+## 项目结构
 
-## Features
-
-* No dependencies on external libraries.
-* Runs natively on Linux, MacOS, and Windows. 
-* Symplectic integrators WHFast, SEI, LEAPFROG, EOS.
-* Hybrid symplectic integrators for planetary dynamics with close encounters MERCURIUS
-* Hybrid reversible integrators for planetary dynamics with arbitrary close encounters TRACE
-* High order symplectic integrators for integrating planetary systems SABA, WH Kernel methods.
-* High accuracy non-symplectic integrator with adaptive time-stepping IAS15.
-* Can integrate arbitrary user-defined ODEs that are coupled to N-body dynamics for tides, spin, etc
-* Support for collisional/granular dynamics, various collision detection routines
-* The computationally intensive parts of the code are written entirely in C, conforming to the ISO standard C99, and can be used as a thread-safe shared library
-* Easy-to-use Python module, installation in 3 words: `pip install rebound`
-* Real-time, 3D visualization, for both C and Python.
-* Extensive set of example problems for both C and Python. You can run examples directly from your browser without the need to download or install anything.
-* Parallelized WHFast512 integrator for super fast integrations of planetary systems with SIMD AVX512 instructions
-* Parallelized with OpenMP (for shared memory systems)
-* Parallelized with MPI is supported for some special use cases only (using an essential tree for gravity and collisions)
-* The code is 100% open-source. All features are included in the public repository on github.
-
-## Try out REBOUND 
-
-You can try out REBOUND without installing it. 
-Simply head over to [the documentation](https://rebound.hanno-rein.de/).
-All the C examples have been compiled with emscripten and can run directly in your browser.
-
-## One minute installation
-
-You can install REBOUND with pip if you want to only use the python version of REBOUND:
-
-    pip install rebound
-
-Then, you can run a simple REBOUND simulation such as
-
-```python
-import rebound
-sim = rebound.Simulation()
-sim.add(m=1.0)
-sim.add(m=1.0e-3, a=1.0)
-sim.integrate(1000.)
-sim.status()
+```
+rebound-cs/
+├── src/            REBOUND 核心 C 源码（N 体积分器）
+├── cs/             Cosmic Stars 物理扩展层
+│   ├── cs.h                统一对外头文件，用户只需 include 这一个
+│   ├── cs_simulation.h/c   框架核心：模块注册、回调调度、生命周期管理
+│   ├── cs_gr.h/c           广义相对论后牛顿修正（三种精度模式）
+│   └── ...                 （更多模块持续添加中）
+├── reboundx/       REBOUNDx 原始 C 源码（仅作参考，不参与编译）
+└── examples/       REBOUND C 示例
 ```
 
-If you want to use the C version of REBOUND simply copy and paste this line into your terminal (it won't do anything bad, we promise):
+---
 
-```bash
-git clone https://github.com/hannorein/rebound && cd rebound/examples/shearing_sheet && make && ./rebound
+## 为什么做这个
+
+REBOUNDx 在 MSVC 上编译失败（VLA、GCC 扩展等问题），导致无法直接集成进
+基于 .NET / C# 的 Cosmic Stars 项目。本库的目标是：
+
+- 将 REBOUNDx 的物理模块移植为 **MSVC 兼容的纯 C99 代码**
+- 去除所有 Python 绑定和 REBOUNDx 框架层（参数链表、动态注册机制）
+- 提供简洁的 C API，方便通过 P/Invoke 从 C# 调用
+- 所有物理模块统一通过 `cs/` 层管理，不侵入 REBOUND 核心
+
+---
+
+## 已实现模块
+
+| 模块 | 文件 | 说明 |
+|------|------|------|
+| GR Potential | `cs/cs_gr.c` | 简单后牛顿势，最快，WHFast 辛安全 |
+| GR Single | `cs/cs_gr.c` | 单源完整 1PN 修正（Anderson 1975） |
+| GR Full | `cs/cs_gr.c` | 全体天体两两 1PN 修正（Newhall 1983），已修复 VLA |
+
+## 计划中的模块
+
+- `cs_mass` — 恒星质量损失 / 增长
+- `cs_radiation` — Poynting-Robertson 辐射拖曳
+- `cs_harmonics` — J2 / J4 / J6 引力矩
+- `cs_migration` — 轨道迁移（Type I / 力阻尼）
+- `cs_tides` — 潮汐（常数时间滞后 / 自旋耦合）
+
+---
+
+## 快速开始
+
+```c
+#include "cs/cs.h"
+
+int main(void) {
+    // 创建 REBOUND 仿真
+    struct reb_simulation* sim = reb_simulation_create();
+
+    // 附加 Cosmic Stars 扩展层
+    cs_simulation_t* cs = cs_simulation_create(sim);
+
+    // 开启广义相对论修正（AU + yr + M_sun 单位制）
+    cs_enable_gr(cs, CS_GR_POTENTIAL, CS_C_AU_YR_MSUN);
+
+    // 添加天体：恒星 + 行星
+    reb_simulation_add_fmt(sim, "m", 1.0);
+    reb_simulation_add_fmt(sim, "m a e", 3e-6, 1.0, 0.01);
+
+    // 积分 1000 年
+    reb_simulation_integrate(sim, 1000.0);
+
+    // 释放（cs 会随 sim 自动释放）
+    reb_simulation_free(sim);
+    return 0;
+}
 ```
 
- 
-## Documentation
-The full documentation with many examples, changelogs and tutorials can be found at
+---
 
-<https://rebound.hanno-rein.de>
+## 上游致谢
 
-If you have trouble installing or using REBOUND, please open an issue on github and we'll try to help as much as we can.
+本项目建立在两个杰出开源项目的肩膀上。
 
-There are also short YouTube videos describing various aspects of REBOUND available at https://www.youtube.com/channel/UCNmrCzxcmWVTBwtDPPLxkkw .
+### REBOUND
 
-## Related projects
+**作者：Hanno Rein、Dan Tamayo 及众多贡献者**
+https://github.com/hannorein/rebound
 
-### Additional physics
-To easily incorporate additional physics modules such as migration forces, GR effects and spin into your REBOUND simulations, see REBOUNDx at https://github.com/dtamayo/reboundx
+REBOUND 是一个极为优雅的 N 体积分器。它的代码结构清晰、接口设计克制、
+物理实现严谨，是少数能让人在阅读源码时感到愉悦的科学计算项目之一。
+`src/` 目录下的全部核心代码均来自 REBOUND，我们未对其做任何修改。
 
-### Analytical and semianalytical tools
-If you're interested in comparing numerical simulations to analytical and semianalytical tools for celestial mechanics, see Celmech at https://github.com/shadden/celmech
+核心论文：
+- Rein & Liu 2012, A&A 537, A128 — 代码结构与引力/碰撞算法
+- Rein & Spiegel 2015, MNRAS 446, 1424 — IAS15 高精度积分器
+- Rein & Tamayo 2015, MNRAS 452, 376 — WHFast 辛积分器
 
-### Ephemeris-quality integrations of test particles
-To generate ephemeris-quality integrations of test particles in the Solar System with a precision on par with JPL's small body integrator, see ASSIST at https://github.com/matthewholman/assist
+### REBOUNDx
 
-## Papers
+**作者：Dan Tamayo、Hanno Rein、Pengshuai Shi 及贡献者**
+https://github.com/dtamayo/reboundx
 
-There are several papers describing the functionality of REBOUND.
+REBOUNDx 以极小的侵入性为 REBOUND 提供了丰富的物理扩展模块，
+其设计理念（通过回调和 void* 实现零耦合扩展）直接启发了本项目 `cs/` 层的架构。
+`reboundx/` 目录保留了其原始 C 源码作为参考。
 
-1. Rein & Liu 2012 (Astronomy and Astrophysics, Volume 537, A128) describes the code structure and the main feature including the gravity and collision routines for many particle systems. <http://adsabs.harvard.edu/abs/2012A%26A...537A.128R>
+核心论文：
+- Tamayo, Rein, Shi & Hernandez 2020, MNRAS 491, 2885
 
-2. Rein & Tremaine 2011 (Monthly Notices of the Royal Astronomical Society, Volume 415, Issue 4, pp. 3168-3176) describes the Symplectic Epicycle integrator for shearing sheet simulations. <https://ui.adsabs.harvard.edu/abs/2011MNRAS.415.3168R>
+---
 
-3. Rein & Spiegel 2015 (Monthly Notices of the Royal Astronomical Society, Volume 446, Issue 2, p.1424-1437) describes the versatile high order integrator IAS15 which is now part of REBOUND. <http://adsabs.harvard.edu/abs/2015MNRAS.446.1424R>
+本项目的存在意义不是替代上述项目，而是为了在特定的工程约束下
+（MSVC 编译、C# 分发、无 Python 依赖）继续使用它们出色的物理实现。
+所有代码遵循 GPL v3 协议。
 
-4. Rein & Tamayo 2015 (Monthly Notices of the Royal Astronomical Society, Volume 452, Issue 1, p.376-388) describes WHFast, the fast and unbiased implementation of a symplectic Wisdom-Holman integrator for long term gravitational simulations. <http://adsabs.harvard.edu/abs/2015MNRAS.452..376R>
-
-5. Rein & Tamayo 2016 (Monthly Notices of the Royal Astronomical Society, Volume 459, Issue 3, p.2275-2285) develop the framework for second order variational equations. <https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.2275R>
-
-6. Rein & Tamayo 2017 (Monthly Notices of the Royal Astronomical Society, Volume 467, Issue 2, p.2377-2383) describes the Simulationarchive for exact reproducibility of N-body simulations. <https://ui.adsabs.harvard.edu/abs/2017MNRAS.467.2377R>
-
-7. Rein & Tamayo 2018 (Monthly Notices of the Royal Astronomical Society, Volume 473, Issue 3, p.3351–3357) describes the integer based JANUS integrator. <https://ui.adsabs.harvard.edu/abs/2018MNRAS.473.3351R>
-
-8. Rein, Hernandez, Tamayo, Brown, Eckels, Holmes, Lau, Leblanc & Silburt 2019 (Monthly Notices of the Royal Astronomical Society, Volume 485, Issue 4, p.5490-5497) describes the hybrid symplectic integrator MERCURIUS. <https://ui.adsabs.harvard.edu/abs/2019MNRAS.485.5490R>
-
-9. Rein, Tamayo & Brown 2019 (Monthly Notices of the Royal Astronomical Society, Volume 489, Issue 4, November 2019, Pages 4632-4640) describes the implementation of the high order symplectic integrators SABA, SABAC, SABACL, WHCKL, WHCKM, and WHCKC. <https://ui.adsabs.harvard.edu/abs/2019MNRAS.489.4632R/>
-
-## Acknowledgments
-
-If you use this code or parts of this code for results presented in a scientific publication, we would greatly appreciate a citation.
-The simplest way to find the citations relevant to the specific setup of your REBOUND simulation is: 
-
-```python
-sim = rebound.Simulation()
--your setup-
-sim.cite()
-```
-
-
-## Contributors
-
-* Hanno Rein, University of Toronto, <hanno@hanno-rein.de>
-* Dan Tamayo, Harvey Mudd College, <dtamayo@hmc.edu>
-* David S. Spiegel, Institute for Advanced Study Princeton, <dave@ias.edu>
-* Garett Brown, University of Toronto, <garett.brown@mail.utoronto.ca>
-* Shangfei Liu, Kavli Institute for Astronomy and Astrophysics at Peking University, <liushangfei@pku.edu.cn>
-* Ari Silburt, Penn State University, <ajs725@psu.edu>
-* and many others! Check the git history to find out who contributed to the code.
-
-REBOUND is open source and you are invited to contribute to this project! 
-
+---
 
 ## License
 
-REBOUND is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-REBOUND is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with REBOUND.  If not, see <http://www.gnu.org/licenses/>.
-
+GPL v3 — 详见 [LICENSE](LICENSE)
