@@ -60,7 +60,7 @@
 
 static void rebx_calculate_gr_full(struct reb_simulation* const sim, struct reb_particle* const particles, const int N, const double C2, const double G, const int max_iterations, const int gravity_ignore_10){
     
-    double a_const[N][3]; // array that stores the value of the constant term
+    double (*a_const)[3] = malloc(N * sizeof(*a_const)); // array that stores the value of the constant term
     struct reb_particle* const ps_b = malloc(N*sizeof(*ps_b));
     memcpy(ps_b, particles, N*sizeof(*ps_b));
 
@@ -182,7 +182,7 @@ static void rebx_calculate_gr_full(struct reb_simulation* const sim, struct reb_
 
     // Now running the substitution again and again through the loop below
     for (int k=0; k<10; k++){ // you can set k as how many substitution you want to make
-        double a_old[N][3]; // initialize an arry that stores the information of previousu calculated accleration
+        double (*a_old)[3] = malloc(N * sizeof(*a_old)); // array that stores the information of previously calculated acceleration
         for (int i =0; i <N; i++){
             a_old[i][0] = ps_b[i].ax;
             a_old[i][1] = ps_b[i].ay;
@@ -226,12 +226,14 @@ static void rebx_calculate_gr_full(struct reb_simulation* const sim, struct reb_
         }
         
         if (maxdev < DBL_EPSILON){
+            free(a_old);
             break;
         }
         if (k==9){
             reb_simulation_warning(sim, "10 loops in rebx_gr_full did not converge.\n");
             fprintf(stderr, "Fractional Error: %e\n", maxdev);
         }
+        free(a_old);
     }
    
     for (int i=0; i<N; i++){
@@ -240,6 +242,7 @@ static void rebx_calculate_gr_full(struct reb_simulation* const sim, struct reb_
         particles[i].az += ps_b[i].az;
     }
     
+    free(a_const);
     free(ps_b);
 
 }
