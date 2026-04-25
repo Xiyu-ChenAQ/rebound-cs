@@ -33,6 +33,8 @@ rebound.egg-info
 venv/
 dist/
 build/
+.claude/
+rebound/examples/
 src/rebound
 src/*.wasm
 src/*.js

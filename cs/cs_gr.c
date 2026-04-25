@@ -74,6 +74,7 @@ void cs_calculate_gr_potential(
         const double dy = p.y - source.y;
         const double dz = p.z - source.z;
         const double r2 = dx*dx + dy*dy + dz*dz;
+        if (r2 < DBL_EPSILON) continue;
 
         /* prefac = 6(GM)^2 / (c^2 r^4)
          * The force direction is INWARD (toward source), hence the minus sign
@@ -491,16 +492,15 @@ void cs_calculate_gr_full(
      *   + 7/2 * G m_j * a_j / r_ij ]                  <- a_j isotropic term
      *
      * Each iteration uses the previous step's a_j estimate (ps_b[j].a).
-     * We store the previous estimate in a_old to measure convergence.
-     * a_old is heap-allocated per-iteration and freed at loop exit. */
-    for (int k = 0; k < max_iter; k++) {
+     * We store the previous estimate in a_old to measure convergence. */
+    double (*a_old)[3] = (double(*)[3])malloc(N * sizeof(*a_old));
+    if (!a_old) {
+        fprintf(stderr, "[cs] cs_calculate_gr_full: out of memory\n");
+        free(a_const); free(ps_b);
+        return;
+    }
 
-        /* Heap-allocate a_old — replaces VLA double a_old[N][3] */
-        double (*a_old)[3] = (double(*)[3])malloc(N * sizeof(*a_old));
-        if (!a_old) {
-            fprintf(stderr, "[cs] cs_calculate_gr_full: out of memory in iteration\n");
-            break;
-        }
+    for (int k = 0; k < max_iter; k++) {
 
         /* Save current acceleration estimate */
         for (int i = 0; i < N; i++) {
@@ -558,8 +558,6 @@ void cs_calculate_gr_full(
             if (fz > maxdev) maxdev = fz;
         }
 
-        free(a_old);   /* free every iteration — no leak on break OR normal exit */
-
         if (maxdev < DBL_EPSILON) {
             break;     /* converged */
         }
@@ -569,6 +567,8 @@ void cs_calculate_gr_full(
             fprintf(stderr, "[cs] gr_full fractional error: %e\n", maxdev);
         }
     }
+
+    free(a_old);
 
     /* --- Step 6: Add converged PN accelerations to the real particle array --- */
     for (int i = 0; i < N; i++) {

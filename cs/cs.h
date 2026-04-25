@@ -43,6 +43,7 @@
 #include "cs_simulation.h"
 #include "cs_gr.h"
 #include "cs_radiation.h"
+#include "cs_solarmass.h"
 
 /* Future modules — uncomment as they are implemented:
  * #include "cs_tides.h"

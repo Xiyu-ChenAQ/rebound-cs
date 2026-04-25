@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <float.h>
 
 /* ============================================================
  * SECTION 1: 底层计算函数
@@ -78,7 +79,9 @@ void cs_calculate_radiation_forces(
         const double dx = p.x - source.x;
         const double dy = p.y - source.y;
         const double dz = p.z - source.z;
-        const double dr = sqrt(dx*dx + dy*dy + dz*dz); /* 粒子到辐射源的距离 */
+        const double dr2 = dx*dx + dy*dy + dz*dz;
+        const double dr = sqrt(dr2); /* 粒子到辐射源的距离 */
+        if (dr < DBL_EPSILON) continue;
 
         /* --- 计算相对速度向量 --- */
         const double dvx = p.vx - source.vx;
@@ -157,10 +160,11 @@ void cs_radiation_additional_forces(struct reb_simulation* sim) {
     const int N = sim->N - sim->N_var;
     const double c = cs->rad_c;
     struct reb_particle* const particles = sim->particles;
+    int source_found = 0;
+    int i;
 
     /* 寻找辐射源粒子（rad_source == 1）*/
-    int source_found = 0;
-    for (int i = 0; i < N; i++) {
+    for (i = 0; i < N; i++) {
         cs_particle_params_t* params = cs_particle_params_get(&particles[i]);
         if (params != NULL && params->rad_source == 1) {
             source_found = 1;

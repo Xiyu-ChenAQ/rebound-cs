@@ -9,6 +9,7 @@
  * ------------------------------------------------------------------------- */
 void cs_gr_additional_forces(struct reb_simulation* sim);
 void cs_radiation_additional_forces(struct reb_simulation* sim);
+void cs_solarmass(struct reb_simulation* sim);
 
 /* -------------------------------------------------------------------------
  * Internal dispatch callbacks
@@ -34,9 +35,6 @@ static void cs_dispatch_additional_forces(struct reb_simulation* sim) {
     if (cs->user_additional_forces) {
         cs->user_additional_forces(sim);
     }
-    if (cs->modules & CS_MODULE_SOLAR_MASS) {
-        cs_solarmass(sim);
-    }
 }
 
 static void cs_dispatch_pre_timestep(struct reb_simulation* sim) {
@@ -55,6 +53,11 @@ static void cs_dispatch_post_timestep(struct reb_simulation* sim) {
     if (!cs) return;
 
     /* Future modules that need post-timestep hooks go here */
+
+    /* --- 恒星质量损失 / 增长 --- */
+    if (cs->modules & CS_MODULE_SOLAR_MASS) {
+        cs_solarmass(sim);
+    }
 
     if (cs->user_post_timestep_modifications) {
         cs->user_post_timestep_modifications(sim);
@@ -203,8 +206,6 @@ void cs_disable_gr(cs_simulation_t* cs) {
     if (!cs) return;
     cs->modules &= ~(CS_MODULE_GR_POTENTIAL | CS_MODULE_GR | CS_MODULE_GR_FULL);
 
-    /* Only clear the flag if no other velocity-dependent module is active */
-    /* (extend this check as more modules are added) */
     const cs_modules_t vel_dep_mask =
         CS_MODULE_GR | CS_MODULE_GR_FULL |
         CS_MODULE_RADIATION | CS_MODULE_MIGRATE_FORCES |
@@ -213,6 +214,11 @@ void cs_disable_gr(cs_simulation_t* cs) {
     if (!(cs->modules & vel_dep_mask)) {
         cs->sim->force_is_velocity_dependent = 0;
     }
+}
+
+void cs_enable_solarmass(cs_simulation_t* cs) {
+    if (!cs) return;
+    cs->modules |= CS_MODULE_SOLAR_MASS;
 }
 
 /* -------------------------------------------------------------------------
@@ -229,6 +235,7 @@ cs_particle_params_t* cs_particle_params_create(void) {
 
 void cs_particle_params_set(struct reb_particle* p, cs_particle_params_t* params) {
     if (!p) return;
+    free(p->ap);   /* 释放旧的 params，避免重复调用时泄漏。free(NULL) 安全 */
     p->ap = params;
 }
 

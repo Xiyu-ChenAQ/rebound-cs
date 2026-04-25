@@ -49,6 +49,7 @@ typedef uint32_t cs_modules_t;
 #define CS_MODULE_STOCHASTIC        (1u << 14)  // Stochastic forces (turbulent disk)
 #define CS_MODULE_CENTRAL_FORCE     (1u << 15)  // Custom central force (power-law)
 #define CS_MODULE_MODIFY_MASS       (1u << 16)  // Time-varying stellar mass
+#define CS_MODULE_SOLAR_MASS        (1u << 17)  // Stellar mass loss/gain (post-timestep)
 
 /* -------------------------------------------------------------------------
  * Per-particle extended parameters
