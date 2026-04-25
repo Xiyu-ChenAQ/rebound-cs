@@ -61,36 +61,27 @@ void cs_calculate_gr_potential(
     double C2,
     double G)
 {
-    /* particles[0] is assumed to be the dominant central body (the star).
-     * prefac1 = 6 (G M)^2 / c^2  — this is constant for all planets. */
-    const struct reb_particle source = particles[0];
-    const double prefac1 = 6.0 * (G * source.m) * (G * source.m) / C2;
+    const struct reb_particle* source = &particles[0];
+    const double prefac1 = 6.0 * (G * source->m) * (G * source->m) / C2;
 
     for (int i = 1; i < N; i++) {
-        const struct reb_particle p = particles[i];
+        const struct reb_particle* p = &particles[i];
 
-        /* Vector from source to planet */
-        const double dx = p.x - source.x;
-        const double dy = p.y - source.y;
-        const double dz = p.z - source.z;
+        const double dx = p->x - source->x;
+        const double dy = p->y - source->y;
+        const double dz = p->z - source->z;
         const double r2 = dx*dx + dy*dy + dz*dz;
         if (r2 < DBL_EPSILON) continue;
 
-        /* prefac = 6(GM)^2 / (c^2 r^4)
-         * The force direction is INWARD (toward source), hence the minus sign
-         * when we apply it to the planet below. */
         const double prefac = prefac1 / (r2 * r2);
 
-        /* Add GR correction to planet */
         particles[i].ax -= prefac * dx;
         particles[i].ay -= prefac * dy;
         particles[i].az -= prefac * dz;
 
-        /* Newton's 3rd law: reaction on the star.
-         * Scale by mass ratio so the star gets the right recoil. */
-        particles[0].ax += (p.m / source.m) * prefac * dx;
-        particles[0].ay += (p.m / source.m) * prefac * dy;
-        particles[0].az += (p.m / source.m) * prefac * dz;
+        particles[0].ax += (p->m / source->m) * prefac * dx;
+        particles[0].ay += (p->m / source->m) * prefac * dy;
+        particles[0].az += (p->m / source->m) * prefac * dz;
     }
 }
 
@@ -170,21 +161,21 @@ void cs_calculate_gr(
 
     const int N_active = (sim->N_active > 0) ? sim->N_active : N;
     for (int i = 0; i < N_active; i++) {
-        const struct reb_particle pi = ps[i];
+        const struct reb_particle* pi = &ps[i];
         for (int j = i + 1; j < N; j++) {
-            const struct reb_particle pj = ps[j];
-            const double dx = pi.x - pj.x;
-            const double dy = pi.y - pj.y;
-            const double dz = pi.z - pj.z;
+            const struct reb_particle* pj = &ps[j];
+            const double dx = pi->x - pj->x;
+            const double dy = pi->y - pj->y;
+            const double dz = pi->z - pj->z;
             const double r2 = dx*dx + dy*dy + dz*dz;
             const double r  = sqrt(r2);
             const double prefac = G / (r2 * r);
-            ps[i].ax -= prefac * pj.m * dx;
-            ps[i].ay -= prefac * pj.m * dy;
-            ps[i].az -= prefac * pj.m * dz;
-            ps[j].ax += prefac * pi.m * dx;
-            ps[j].ay += prefac * pi.m * dy;
-            ps[j].az += prefac * pi.m * dz;
+            ps[i].ax -= prefac * pj->m * dx;
+            ps[i].ay -= prefac * pj->m * dy;
+            ps[i].az -= prefac * pj->m * dz;
+            ps[j].ax += prefac * pi->m * dx;
+            ps[j].ay += prefac * pi->m * dy;
+            ps[j].az += prefac * pi->m * dz;
         }
     }
 
@@ -197,31 +188,24 @@ void cs_calculate_gr(
 
     /* --- Step 3: Compute PN correction for each planet in Jacobi frame --- */
     for (int i = 1; i < N; i++) {
-        struct reb_particle p = ps_j[i];
+        const struct reb_particle* p = &ps_j[i];
 
-        /* Jacobi position magnitude */
-        const double ri = sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
+        const double ri = sqrt(p->x*p->x + p->y*p->y + p->z*p->z);
 
-        /* Start iteration: v_tilde_0 = v_observed */
-        struct reb_vec3d vi = { p.vx, p.vy, p.vz };
+        struct reb_vec3d vi = { p->vx, p->vy, p->vz };
         double vi2 = vi.x*vi.x + vi.y*vi.y + vi.z*vi.z;
 
-        /* A = (0.5 v^2 + 3 mu/r) / c^2
-         * This factor captures how much the "true" velocity differs from
-         * the coordinate velocity due to relativistic effects. */
         double A = (0.5*vi2 + 3.0*mu/ri) / C2;
 
-        /* Iterate: v_tilde = v_obs / (1 - A(v_tilde)) */
         int q;
         for (q = 0; q < max_iter; q++) {
             struct reb_vec3d old_vi = vi;
-            vi.x = p.vx / (1.0 - A);
-            vi.y = p.vy / (1.0 - A);
-            vi.z = p.vz / (1.0 - A);
+            vi.x = p->vx / (1.0 - A);
+            vi.y = p->vy / (1.0 - A);
+            vi.z = p->vz / (1.0 - A);
             vi2  = vi.x*vi.x + vi.y*vi.y + vi.z*vi.z;
             A    = (0.5*vi2 + 3.0*mu/ri) / C2;
 
-            /* Check convergence: fractional change in v smaller than machine epsilon */
             const double dvx = vi.x - old_vi.x;
             const double dvy = vi.y - old_vi.y;
             const double dvz = vi.z - old_vi.z;
@@ -235,29 +219,21 @@ void cs_calculate_gr(
                 "Consider using CS_GR_FULL or reducing the timestep.");
         }
 
-        /* B = (mu/r - 1.5 v^2) * mu / (r^3 c^2)
-         * This is the radial PN correction coefficient. */
         const double B = (mu/ri - 1.5*vi2) * mu / (ri*ri*ri * C2);
 
-        /* r_dot = r . v_obs  (rate of change of distance) */
-        const double rdotv = p.x*p.vx + p.y*p.vy + p.z*p.vz;
+        const double rdotv = p->x*p->vx + p->y*p->vy + p->z*p->vz;
 
-        /* v_tilde_dot = a_Newton + B * r
-         * (time derivative of the corrected velocity) */
         struct reb_vec3d vidot;
-        vidot.x = p.ax + B * p.x;
-        vidot.y = p.ay + B * p.y;
-        vidot.z = p.az + B * p.z;
+        vidot.x = p->ax + B * p->x;
+        vidot.y = p->ay + B * p->y;
+        vidot.z = p->az + B * p->z;
 
-        /* D = (v_tilde . v_tilde_dot - 3 mu r_dot / r^3) / c^2 */
         const double vdotvdot = vi.x*vidot.x + vi.y*vidot.y + vi.z*vidot.z;
         const double D = (vdotvdot - 3.0*mu / (ri*ri*ri) * rdotv) / C2;
 
-        /* Final PN acceleration in Jacobi frame:
-         *   a_PN = B*(1-A)*r - A*a_Newton - D*v_tilde  */
-        ps_j[i].ax = B*(1.0 - A)*p.x - A*p.ax - D*vi.x;
-        ps_j[i].ay = B*(1.0 - A)*p.y - A*p.ay - D*vi.y;
-        ps_j[i].az = B*(1.0 - A)*p.z - A*p.az - D*vi.z;
+        ps_j[i].ax = B*(1.0 - A)*p->x - A*p->ax - D*vi.x;
+        ps_j[i].ay = B*(1.0 - A)*p->y - A*p->ay - D*vi.y;
+        ps_j[i].az = B*(1.0 - A)*p->z - A*p->az - D*vi.z;
     }
 
     /* Source body (star) gets zero PN correction in Jacobi frame
@@ -352,21 +328,21 @@ void cs_calculate_gr_full(
         ps_b[i].az = 0.0;
     }
     for (int i = 0; i < N; i++) {
-        const struct reb_particle pi = ps_b[i];
+        const struct reb_particle* pi = &ps_b[i];
         for (int j = i + 1; j < N; j++) {
-            const struct reb_particle pj = ps_b[j];
-            const double dx     = pi.x - pj.x;
-            const double dy     = pi.y - pj.y;
-            const double dz     = pi.z - pj.z;
+            const struct reb_particle* pj = &ps_b[j];
+            const double dx     = pi->x - pj->x;
+            const double dy     = pi->y - pj->y;
+            const double dz     = pi->z - pj->z;
             const double r2     = dx*dx + dy*dy + dz*dz;
             const double r      = sqrt(r2);
             const double prefac = G / (r2 * r);
-            ps_b[i].ax -= prefac * pj.m * dx;
-            ps_b[i].ay -= prefac * pj.m * dy;
-            ps_b[i].az -= prefac * pj.m * dz;
-            ps_b[j].ax += prefac * pi.m * dx;
-            ps_b[j].ay += prefac * pi.m * dy;
-            ps_b[j].az += prefac * pi.m * dz;
+            ps_b[i].ax -= prefac * pj->m * dx;
+            ps_b[i].ay -= prefac * pj->m * dy;
+            ps_b[i].az -= prefac * pj->m * dz;
+            ps_b[j].ax += prefac * pi->m * dx;
+            ps_b[j].ay += prefac * pi->m * dy;
+            ps_b[j].az += prefac * pi->m * dz;
         }
     }
 

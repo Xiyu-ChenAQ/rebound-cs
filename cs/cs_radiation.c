@@ -58,52 +58,33 @@ void cs_calculate_radiation_forces(
     double c,
     int source_index)
 {
-    const struct reb_particle source = particles[source_index];
-
-    /* mu = G * M_source，辐射压大小的基准引力参数 */
-    const double mu = sim->G * source.m;
+    const struct reb_particle* source = &particles[source_index];
+    const double mu = sim->G * source->m;
 
     for (int i = 0; i < N; i++) {
-        /* 辐射源自身不受辐射力 */
         if (i == source_index) continue;
 
-        /* 只有设置了 beta 的粒子才受辐射力
-         * beta = 0 表示未设置，跳过 */
         cs_particle_params_t* params = cs_particle_params_get(&particles[i]);
         if (params == NULL || params->beta == 0.0) continue;
 
         const double beta = params->beta;
-        const struct reb_particle p = particles[i];
+        const struct reb_particle* p = &particles[i];
 
-        /* --- 计算相对位置向量（从辐射源指向粒子）--- */
-        const double dx = p.x - source.x;
-        const double dy = p.y - source.y;
-        const double dz = p.z - source.z;
+        const double dx = p->x - source->x;
+        const double dy = p->y - source->y;
+        const double dz = p->z - source->z;
         const double dr2 = dx*dx + dy*dy + dz*dz;
-        const double dr = sqrt(dr2); /* 粒子到辐射源的距离 */
+        const double dr = sqrt(dr2);
         if (dr < DBL_EPSILON) continue;
 
-        /* --- 计算相对速度向量 --- */
-        const double dvx = p.vx - source.vx;
-        const double dvy = p.vy - source.vy;
-        const double dvz = p.vz - source.vz;
+        const double dvx = p->vx - source->vx;
+        const double dvy = p->vy - source->vy;
+        const double dvz = p->vz - source->vz;
 
-        /* 径向速度标量 r_dot = (r_rel · v_rel) / r
-         * 正值表示粒子正在远离辐射源 */
         const double rdot = (dx*dvx + dy*dvy + dz*dvz) / dr;
 
-        /* 辐射压加速度大小 a_rad = beta * G * M / r^2
-         * 这是纯辐射压（无 PR 拖曳修正时）的大小 */
         const double a_rad = beta * mu / (dr * dr);
 
-        /* --- Burns et al. (1979) 方程 (5) ---
-         * a_vec = a_rad * [(1 - r_dot/c) * r_hat - v_rel/c]
-         *
-         * 分解：
-         *   (1 - r_dot/c) * r_hat  → 辐射压方向（径向），含多普勒修正
-         *   - v_rel / c            → PR 拖曳方向（与相对速度反向）
-         *
-         * r_hat 的各分量 = (dx/dr, dy/dr, dz/dr) */
         particles[i].ax += a_rad * ((1.0 - rdot/c) * dx/dr - dvx/c);
         particles[i].ay += a_rad * ((1.0 - rdot/c) * dy/dr - dvy/c);
         particles[i].az += a_rad * ((1.0 - rdot/c) * dz/dr - dvz/c);
