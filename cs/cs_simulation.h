@@ -190,9 +190,13 @@ void cs_enable_radiation(cs_simulation_t* cs, double c);
  */
 void cs_disable_radiation(cs_simulation_t* cs);
 
+/**
+ * 开启引力谐波模块 (J2, J4, J6)
+ */
+void cs_enable_harmonics(cs_simulation_t* cs);
+
 /* 更多模块待实现：
  *   void cs_enable_tides_ctl(cs_simulation_t* cs);
- *   void cs_enable_harmonics(cs_simulation_t* cs);
  *   void cs_enable_migration_forces(cs_simulation_t* cs);
  */
 
