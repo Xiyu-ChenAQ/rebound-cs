@@ -68,6 +68,7 @@ typedef struct cs_particle_params {
     /* Tides (constant time lag) */
     double  tides_k2;           // Love number k2
     double  tides_Q;            // tidal quality factor Q
+    double  tides_tau;          // constant time lag τ (if 0, conservative only)
     double  tides_R;            // physical radius of the body (sim length units)
 
     /* Tides (spin) */
@@ -195,8 +196,12 @@ void cs_disable_radiation(cs_simulation_t* cs);
  */
 void cs_enable_harmonics(cs_simulation_t* cs);
 
+/**
+ * 开启潮汐模块 (constant time lag)
+ */
+void cs_enable_tides(cs_simulation_t* cs);
+
 /* 更多模块待实现：
- *   void cs_enable_tides_ctl(cs_simulation_t* cs);
  *   void cs_enable_migration_forces(cs_simulation_t* cs);
  */
 

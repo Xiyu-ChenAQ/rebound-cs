@@ -22,7 +22,7 @@ BLDDIR = build
 # --- source files ---
 CS_SRC   = $(CSDIR)/cs_simulation.c $(CSDIR)/cs_gr.c \
            $(CSDIR)/cs_radiation.c $(CSDIR)/cs_harmonics.c \
-           $(CSDIR)/cs_solarmass.c
+           $(CSDIR)/cs_tides.c $(CSDIR)/cs_solarmass.c
 SRC_ALL  = $(wildcard $(SRCDIR)/*.c)
 TST_SRC  = $(BLDDIR)/test_cs.c
 DEMO_SRC = $(BLDDIR)/demo_physics.c

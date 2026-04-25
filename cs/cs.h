@@ -44,10 +44,11 @@
 #include "cs_gr.h"
 #include "cs_radiation.h"
 #include "cs_harmonics.h"
+#include "cs_tides.h"
 #include "cs_solarmass.h"
 
 /* Future modules — uncomment as they are implemented:
- * #include "cs_tides.h"
+ * #include "cs_migration.h"
  * #include "cs_migration.h"
  * #include "cs_forces.h"
  */

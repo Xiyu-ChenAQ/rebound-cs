@@ -10,6 +10,7 @@
 void cs_gr_additional_forces(struct reb_simulation* sim);
 void cs_radiation_additional_forces(struct reb_simulation* sim);
 void cs_harmonics_additional_forces(struct reb_simulation* sim);
+void cs_tides_additional_forces(struct reb_simulation* sim);
 void cs_solarmass(struct reb_simulation* sim);
 
 /* -------------------------------------------------------------------------
@@ -35,6 +36,11 @@ static void cs_dispatch_additional_forces(struct reb_simulation* sim) {
     /* --- 引力谐波 (J2/J4/J6) --- */
     if (cs->modules & CS_MODULE_HARMONICS) {
         cs_harmonics_additional_forces(sim);
+    }
+
+    /* --- 潮汐 (constant time lag) --- */
+    if (cs->modules & CS_MODULE_TIDES_CTL) {
+        cs_tides_additional_forces(sim);
     }
 
     /* Chain into user's own additional_forces if they set one before cs_simulation_create */
@@ -230,6 +236,12 @@ void cs_enable_solarmass(cs_simulation_t* cs) {
 void cs_enable_harmonics(cs_simulation_t* cs) {
     if (!cs) return;
     cs->modules |= CS_MODULE_HARMONICS;
+}
+
+void cs_enable_tides(cs_simulation_t* cs) {
+    if (!cs) return;
+    cs->modules |= CS_MODULE_TIDES_CTL;
+    cs->sim->force_is_velocity_dependent = 1;
 }
 
 /* -------------------------------------------------------------------------
